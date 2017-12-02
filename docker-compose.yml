@@ -1,0 +1,42 @@
+version: '2'
+
+services:
+  redis:
+    restart: always
+    image: redis:alpine
+  
+  nginx:
+    restart: always
+    build: ./compose/nginx
+    depends_on:
+      - django
+    ports:
+      - "8880:80"
+    volumes:
+      - ./passport/app:/app:Z  
+      - ./passport/log:/var/log/nginx:Z
+    env_file: ./passport/app/env.docker
+
+  postgres:
+    restart: always
+    image: postgres:alpine
+    volumes:
+      - ./passport/dbs:/var/lib/postgresql:Z
+    env_file: ./passport/app/env.docker
+
+  django:
+    restart: always
+    image: django:passport
+    depends_on:
+      - postgres
+      - redis
+    links:
+      - postgres
+      - redis
+    ports:
+      - "5000:5000"      
+    volumes:
+      - ./passport/app:/app:Z
+      - ./passport/log:/var/log/:Z
+    env_file: ./passport/app/env.docker
+    command: /usr/bin/supervisord -n -c /etc/supervisord.conf
